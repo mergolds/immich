@@ -4,7 +4,9 @@ import { orderBy } from 'lodash-es';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { goto } from '$app/navigation';
+import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
+import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
 import { Route } from '$lib/route';
 import {
   AlbumFilter,
@@ -44,6 +46,8 @@ export const createAlbumAndRedirect = async (name?: string, assetIds?: string[])
     await goto(Route.viewAlbum(newAlbum));
   }
 };
+
+export const canCreateAlbum = () => !serverConfigManager.value.adminOnlyAlbumCreation || authManager.user.isAdmin;
 
 /**
  * -------------

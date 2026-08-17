@@ -10,6 +10,56 @@ returning
   "albumId",
   "role"
 
+-- AlbumUserRepository.createForAlbum
+insert into
+  "album_user" ("albumId", "userId", "role")
+select
+  "album"."id" as "albumId",
+  "user"."id" as "userId",
+  $1 as "role"
+from
+  "user"
+  cross join "album"
+where
+  "album"."id" = $2
+  and "album"."deletedAt" is null
+  and "user"."deletedAt" is null on conflict ("albumId", "userId") do nothing
+returning
+  "userId"
+
+-- AlbumUserRepository.createForUser
+insert into
+  "album_user" ("albumId", "userId", "role")
+select
+  "album"."id" as "albumId",
+  "user"."id" as "userId",
+  $1 as "role"
+from
+  "album"
+  cross join "user"
+where
+  "user"."id" = $2
+  and "user"."deletedAt" is null
+  and "album"."deletedAt" is null on conflict ("albumId", "userId") do nothing
+returning
+  "albumId"
+
+-- AlbumUserRepository.createForAll
+insert into
+  "album_user" ("albumId", "userId", "role")
+select
+  "album"."id" as "albumId",
+  "user"."id" as "userId",
+  $1 as "role"
+from
+  "album"
+  cross join "user"
+where
+  "user"."deletedAt" is null
+  and "album"."deletedAt" is null on conflict ("albumId", "userId") do nothing
+returning
+  "albumId"
+
 -- AlbumUserRepository.update
 update "album_user"
 set

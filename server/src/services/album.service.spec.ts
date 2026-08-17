@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { BulkIdErrorReason } from 'src/dtos/asset-ids.response.dto';
 import { AlbumUserRole, AssetOrder, UserMetadataKey } from 'src/enum';
 import { AlbumService } from 'src/services/album.service';
@@ -22,6 +22,26 @@ describe(AlbumService.name, () => {
 
   it('should work', () => {
     expect(sut).toBeDefined();
+  });
+
+  describe('onUserRestore', () => {
+    it('reconciles restored albums and users when auto-sharing is enabled', async () => {
+      mocks.systemMetadata.get.mockResolvedValue({
+        jeCustomizations: { autoShareAlbums: true },
+      });
+      mocks.albumUser.createForAll.mockResolvedValue(2);
+
+      await sut.onUserRestore();
+
+      expect(mocks.albumUser.createForAll).toHaveBeenCalledOnce();
+      expect(mocks.albumUser.createForUser).not.toHaveBeenCalled();
+    });
+
+    it('does not reconcile when auto-sharing is disabled', async () => {
+      await sut.onUserRestore();
+
+      expect(mocks.albumUser.createForAll).not.toHaveBeenCalled();
+    });
   });
 
   describe('getStatistics', () => {
@@ -205,6 +225,75 @@ describe(AlbumService.name, () => {
   });
 
   describe('create', () => {
+    it('rejects a current non-admin when album creation is restricted', async () => {
+      const auth = AuthFactory.create({ isAdmin: false });
+      mocks.systemMetadata.get.mockResolvedValue({
+        jeCustomizations: { adminOnlyAlbumCreation: true },
+      });
+      mocks.user.get.mockResolvedValue(UserFactory.create({ id: auth.user.id, isAdmin: false }));
+
+      await expect(sut.create(auth, { albumName: 'Restricted album' })).rejects.toBeInstanceOf(ForbiddenException);
+
+      expect(mocks.user.get).toHaveBeenCalledWith(auth.user.id, {});
+      expect(mocks.album.create).not.toHaveBeenCalled();
+    });
+
+    it('allows a current admin when album creation is restricted', async () => {
+      const owner = UserFactory.create({ isAdmin: true });
+      const auth = AuthFactory.create(owner);
+      const album = AlbumFactory.from().owner(owner).build();
+      mocks.systemMetadata.get.mockResolvedValue({
+        jeCustomizations: { adminOnlyAlbumCreation: true },
+      });
+      mocks.user.get.mockResolvedValue(owner);
+      mocks.user.getMetadata.mockResolvedValue([]);
+      mocks.album.create.mockResolvedValue(getForAlbum(album));
+
+      await expect(sut.create(auth, { albumName: album.albumName })).resolves.toEqual(
+        expect.objectContaining({ id: album.id }),
+      );
+    });
+
+    it('auto-shares with all users while only inviting explicit users', async () => {
+      const owner = UserFactory.create();
+      const explicitUser = UserFactory.create();
+      const automaticUser = UserFactory.create();
+      const auth = AuthFactory.create(owner);
+      const album = AlbumFactory.from().owner(owner).albumUser(explicitUser).albumUser(automaticUser).build();
+      mocks.systemMetadata.get.mockResolvedValue({
+        jeCustomizations: { autoShareAlbums: true },
+      });
+      mocks.user.get.mockResolvedValue(explicitUser);
+      mocks.user.getList.mockResolvedValue([owner, explicitUser, automaticUser]);
+      mocks.user.getMetadata.mockResolvedValue([]);
+      mocks.album.create.mockResolvedValue(getForAlbum(album));
+      mocks.album.getById.mockResolvedValue(getForAlbum(album));
+      mocks.albumUser.createForAlbum.mockResolvedValue(0);
+
+      await sut.create(auth, {
+        albumName: album.albumName,
+        albumUsers: [{ userId: explicitUser.id, role: AlbumUserRole.Viewer }],
+      });
+
+      expect(mocks.album.create).toHaveBeenCalledWith(
+        expect.objectContaining({ albumName: album.albumName }),
+        [],
+        [
+          { userId: owner.id, role: AlbumUserRole.Owner },
+          { userId: explicitUser.id, role: AlbumUserRole.Editor },
+          { userId: automaticUser.id, role: AlbumUserRole.Editor },
+        ],
+        owner.id,
+      );
+      expect(mocks.albumUser.createForAlbum).toHaveBeenCalledWith(album.id);
+      expect(mocks.event.emit).toHaveBeenCalledTimes(1);
+      expect(mocks.event.emit).toHaveBeenCalledWith('AlbumInvite', {
+        id: album.id,
+        userId: explicitUser.id,
+        senderName: owner.name,
+      });
+    });
+
     it('creates album', async () => {
       const assetId = newUuid();
       const albumUser = { userId: newUuid(), role: AlbumUserRole.Editor };

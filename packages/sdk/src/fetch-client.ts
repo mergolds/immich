@@ -1993,6 +1993,8 @@ export type ServerApkLinksDto = {
     x86_64: string;
 };
 export type ServerConfigDto = {
+    /** Whether album creation is restricted to administrators */
+    adminOnlyAlbumCreation: boolean;
     /** External domain URL */
     externalDomain: string;
     /** Whether the server has been initialized */
@@ -2393,6 +2395,12 @@ export type SystemConfigIntegrityChecks = {
     missingFiles: SystemConfigIntegrityJob;
     untrackedFiles: SystemConfigIntegrityJob;
 };
+export type SystemConfigJeCustomizationsDto = {
+    /** Restrict album creation to administrators */
+    adminOnlyAlbumCreation: boolean;
+    /** Automatically share albums with all users */
+    autoShareAlbums: boolean;
+};
 export type JobSettingsDto = {
     /** Concurrency */
     concurrency: number;
@@ -2620,6 +2628,7 @@ export type SystemConfigDto = {
     ffmpeg: SystemConfigFFmpegDto;
     image: SystemConfigImageDto;
     integrityChecks: SystemConfigIntegrityChecks;
+    jeCustomizations: SystemConfigJeCustomizationsDto;
     job: SystemConfigJobDto;
     library: SystemConfigLibraryDto;
     logging: SystemConfigLoggingDto;

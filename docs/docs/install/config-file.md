@@ -66,6 +66,10 @@ The default configuration looks like this:
       "size": 250
     }
   },
+  "jeCustomizations": {
+    "adminOnlyAlbumCreation": false,
+    "autoShareAlbums": false
+  },
   "job": {
     "backgroundTask": {
       "concurrency": 5

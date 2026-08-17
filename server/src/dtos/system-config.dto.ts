@@ -95,6 +95,13 @@ const SystemConfigIntegrityChecksSchema = z
 
 const SystemConfigBackupsSchema = z.object({ database: DatabaseBackupSchema }).meta({ id: 'SystemConfigBackupsDto' });
 
+const SystemConfigJECustomizationsSchema = z
+  .object({
+    autoShareAlbums: configBool.describe('Automatically share albums with all users'),
+    adminOnlyAlbumCreation: configBool.describe('Restrict album creation to administrators'),
+  })
+  .meta({ id: 'SystemConfigJECustomizationsDto' });
+
 const SystemConfigFFmpegSchema = z
   .object({
     crf: z.coerce.number().int().min(0).max(51).describe('CRF'),
@@ -430,6 +437,7 @@ export const SystemConfigSchema = z
     server: SystemConfigServerSchema,
     user: SystemConfigUserSchema,
     integrityChecks: SystemConfigIntegrityChecksSchema,
+    jeCustomizations: SystemConfigJECustomizationsSchema,
   })
   .describe('System configuration')
   .meta({ id: 'SystemConfigDto' });
@@ -437,6 +445,7 @@ export const SystemConfigSchema = z
 export class SystemConfigFFmpegDto extends createZodDto(SystemConfigFFmpegSchema) {}
 export class SystemConfigSmtpDto extends createZodDto(SystemConfigSmtpSchema) {}
 export class SystemConfigTemplateStorageOptionDto extends createZodDto(SystemConfigTemplateStorageOptionSchema) {}
+export class SystemConfigJECustomizationsDto extends createZodDto(SystemConfigJECustomizationsSchema) {}
 export class SystemConfigDto extends createZodDto(SystemConfigSchema) {}
 
 export function mapConfig(config: SystemConfig): SystemConfigDto {

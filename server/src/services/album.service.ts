@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { OnEvent } from 'src/decorators';
 import {
   AddUsersDto,
   AlbumResponseDto,
@@ -14,8 +15,9 @@ import {
 import { BulkIdErrorReason, BulkIdResponseDto, BulkIdsDto } from 'src/dtos/asset-ids.response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
 import { MapMarkerResponseDto } from 'src/dtos/map.dto';
-import { AlbumUserRole, Permission } from 'src/enum';
+import { AlbumUserRole, ImmichWorker, Permission } from 'src/enum';
 import { AlbumAssetCount, AlbumInfoOptions } from 'src/repositories/album.repository';
+import { ArgOf } from 'src/repositories/event.repository';
 import { BaseService } from 'src/services/base.service';
 import { addAssets, removeAssets } from 'src/utils/asset.util';
 import { asDateTimeString } from 'src/utils/date';
@@ -23,6 +25,35 @@ import { getPreferences } from 'src/utils/preferences';
 
 @Injectable()
 export class AlbumService extends BaseService {
+  @OnEvent({ name: 'ConfigInit', workers: [ImmichWorker.Api] })
+  async onConfigInit({ newConfig }: ArgOf<'ConfigInit'>): Promise<void> {
+    if (newConfig.jeCustomizations.autoShareAlbums) {
+      await this.reconcileAllAlbums();
+    }
+  }
+
+  @OnEvent({ name: 'ConfigUpdate', workers: [ImmichWorker.Api] })
+  async onConfigUpdate({ oldConfig, newConfig }: ArgOf<'ConfigUpdate'>): Promise<void> {
+    if (!oldConfig.jeCustomizations.autoShareAlbums && newConfig.jeCustomizations.autoShareAlbums) {
+      await this.reconcileAllAlbums();
+    }
+  }
+
+  @OnEvent({ name: 'UserCreate', workers: [ImmichWorker.Api] })
+  async onUserCreate({ id }: ArgOf<'UserCreate'>): Promise<void> {
+    await this.reconcileUser(id);
+  }
+
+  @OnEvent({ name: 'UserRestore', workers: [ImmichWorker.Api] })
+  async onUserRestore(): Promise<void> {
+    const config = await this.getConfig({ withCache: true });
+    if (!config.jeCustomizations.autoShareAlbums) {
+      return;
+    }
+
+    await this.reconcileAllAlbums();
+  }
+
   async getStatistics(auth: AuthDto): Promise<AlbumStatisticsResponseDto> {
     const [owned, shared, notShared] = await Promise.all([
       this.albumRepository.getAll(auth.user.id, { isOwned: true }),
@@ -98,9 +129,17 @@ export class AlbumService extends BaseService {
   }
 
   async create(auth: AuthDto, dto: CreateAlbumDto): Promise<AlbumResponseDto> {
-    const albumUsers = (dto.albumUsers || []).filter(({ userId }) => userId !== auth.user.id);
+    const config = await this.getConfig({ withCache: true });
+    if (config.jeCustomizations.adminOnlyAlbumCreation) {
+      const user = await this.userRepository.get(auth.user.id, {});
+      if (!user?.isAdmin) {
+        throw new ForbiddenException('Album creation is restricted to administrators');
+      }
+    }
 
-    for (const { userId } of albumUsers) {
+    const explicitAlbumUsers = (dto.albumUsers || []).filter(({ userId }) => userId !== auth.user.id);
+
+    for (const { userId } of explicitAlbumUsers) {
       const exists = await this.userRepository.get(userId, {});
       if (!exists) {
         this.logger.debug('Album creation failed: user not found');
@@ -116,6 +155,17 @@ export class AlbumService extends BaseService {
     const assetIds = [...allowedAssetIdsSet].map((id) => id);
 
     const userMetadata = await this.userRepository.getMetadata(auth.user.id);
+    let albumUsers = explicitAlbumUsers;
+    if (config.jeCustomizations.autoShareAlbums) {
+      const users = await this.userRepository.getList({ withDeleted: false });
+      const automaticUsers = new Map(
+        users.filter(({ id }) => id !== auth.user.id).map(({ id }) => [id, { userId: id, role: AlbumUserRole.Editor }]),
+      );
+      albumUsers = [
+        ...explicitAlbumUsers.filter(({ userId }) => !automaticUsers.has(userId)),
+        ...automaticUsers.values(),
+      ];
+    }
 
     const album = await this.albumRepository.create(
       {
@@ -129,8 +179,14 @@ export class AlbumService extends BaseService {
       auth.user.id,
     );
 
-    for (const { userId } of albumUsers) {
+    for (const { userId } of explicitAlbumUsers) {
       await this.eventRepository.emit('AlbumInvite', { id: album.id, userId, senderName: auth.user.name });
+    }
+
+    if (config.jeCustomizations.autoShareAlbums) {
+      const count = await this.albumUserRepository.createForAlbum(album.id);
+      this.logger.log(`Auto-shared album ${album.id} with ${count} users`);
+      return mapAlbum(await this.findOrFail(album.id, auth.user.id, { withAssets: true }));
     }
 
     return mapAlbum(album);
@@ -357,5 +413,20 @@ export class AlbumService extends BaseService {
       throw new BadRequestException('Album not found');
     }
     return album;
+  }
+
+  private async reconcileAllAlbums(): Promise<void> {
+    const count = await this.albumUserRepository.createForAll();
+    this.logger.log(`Auto-shared albums with ${count} users`);
+  }
+
+  private async reconcileUser(userId: string): Promise<void> {
+    const config = await this.getConfig({ withCache: true });
+    if (!config.jeCustomizations.autoShareAlbums) {
+      return;
+    }
+
+    const count = await this.albumUserRepository.createForUser(userId);
+    this.logger.log(`Auto-shared ${count} albums with user ${userId}`);
   }
 }

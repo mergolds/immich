@@ -97,6 +97,10 @@ const updatedConfig = Object.freeze<SystemConfig>({
       percentageLimit: 1,
     },
   },
+  jeCustomizations: {
+    autoShareAlbums: false,
+    adminOnlyAlbumCreation: false,
+  },
   logging: {
     enabled: true,
     level: LogLevel.Log,

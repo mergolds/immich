@@ -155,4 +155,26 @@ describe('Album Modal', () => {
       createAlbumRow(constructionAlbum, true),
     ]);
   });
+
+  it('omits new album row when creation is not allowed', () => {
+    const converter = new AlbumModalRowConverter(AlbumSortBy.MostRecentPhoto, SortOrder.Desc);
+    const modalRows = converter.toModalRows('', [], [], -1, [], false);
+
+    expect(modalRows).toStrictEqual([createMessageRow('no_albums_yet')]);
+  });
+
+  it('adjusts selection offsets when creation is not allowed', () => {
+    const converter = new AlbumModalRowConverter(AlbumSortBy.MostRecentPhoto, SortOrder.Desc);
+    const holidayAlbum = albumFactory.build({ albumName: 'Holidays' });
+    const constructionAlbum = albumFactory.build({ albumName: 'Construction' });
+    const modalRows = converter.toModalRows('', [holidayAlbum], [holidayAlbum, constructionAlbum], 0, [], false);
+
+    expect(modalRows).toStrictEqual([
+      createSectionRow('RECENT'),
+      createAlbumRow(holidayAlbum, true),
+      createSectionRow('ALL_ALBUMS'),
+      createAlbumRow(holidayAlbum, false),
+      createAlbumRow(constructionAlbum, false),
+    ]);
+  });
 });

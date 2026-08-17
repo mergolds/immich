@@ -5,9 +5,9 @@
     AlbumModalRowType,
     isSelectableRowType,
   } from '$lib/components/shared-components/album-selection/album-selection-utils';
-  import { eventManager } from '$lib/managers/event-manager.svelte';
   import { albumViewSettings } from '$lib/stores/preferences.store';
-  import { createAlbum, getAllAlbums, type AlbumResponseDto } from '@immich/sdk';
+  import { canCreateAlbum, createAlbum } from '$lib/utils/album-utils';
+  import { getAllAlbums, type AlbumResponseDto } from '@immich/sdk';
   import { Button, Icon, Modal, ModalBody, ModalFooter, Text } from '@immich/ui';
   import { mdiKeyboardReturn } from '@mdi/js';
   import { onMount } from 'svelte';
@@ -38,13 +38,15 @@
 
   const rowConverter = new AlbumModalRowConverter($albumViewSettings.sortBy, $albumViewSettings.sortOrder);
   const albumModalRows = $derived(
-    rowConverter.toModalRows(search, recentAlbums, albums, selectedRowIndex, multiSelectedAlbumIds),
+    rowConverter.toModalRows(search, recentAlbums, albums, selectedRowIndex, multiSelectedAlbumIds, canCreateAlbum()),
   );
   const selectableRowCount = $derived(albumModalRows.filter((row) => isSelectableRowType(row.type)).length);
 
   const onNewAlbum = async (name: string) => {
-    const album = await createAlbum({ createAlbumDto: { albumName: name } });
-    eventManager.emit('AlbumCreate', album);
+    const album = await createAlbum(name);
+    if (!album) {
+      return;
+    }
     onClose([album]);
   };
 
@@ -115,6 +117,10 @@
     switch (e.key) {
       case 'ArrowUp': {
         e.preventDefault();
+        if (selectableRowCount === 0) {
+          selectedRowIndex = -1;
+          break;
+        }
         if (selectedRowIndex > 0) {
           selectedRowIndex--;
         } else {
@@ -124,6 +130,10 @@
       }
       case 'ArrowDown': {
         e.preventDefault();
+        if (selectableRowCount === 0) {
+          selectedRowIndex = -1;
+          break;
+        }
         if (selectedRowIndex < selectableRowCount - 1) {
           selectedRowIndex++;
         } else {

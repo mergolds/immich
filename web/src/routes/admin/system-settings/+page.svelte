@@ -4,6 +4,7 @@
   import FFmpegSettings from './FFmpegSettings.svelte';
   import ImageSettings from './ImageSettings.svelte';
   import JobSettings from './JobSettings.svelte';
+  import JECustomizationsSettings from './JECustomizationsSettings.svelte';
   import LibrarySettings from './LibrarySettings.svelte';
   import LoggingSettings from './LoggingSettings.svelte';
   import MachineLearningSettings from './MachineLearningSettings.svelte';
@@ -41,6 +42,7 @@
     mdiRobotOutline,
     mdiServerOutline,
     mdiSync,
+    mdiTune,
     mdiTrashCanOutline,
     mdiUpdate,
     mdiVideoOutline,
@@ -97,6 +99,13 @@
       subtitle: $t('admin.job_settings_description'),
       key: 'job',
       icon: mdiSync,
+    },
+    {
+      component: JECustomizationsSettings,
+      title: $t('admin.je_customizations'),
+      subtitle: $t('admin.je_customizations_description'),
+      key: 'je-customizations',
+      icon: mdiTune,
     },
     {
       component: LibrarySettings,

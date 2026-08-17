@@ -125,6 +125,7 @@ const ServerConfigSchema = z
     mapLightStyleUrl: z.string().describe('Map light style URL'),
     maintenanceMode: z.boolean().describe('Whether maintenance mode is active'),
     minFaces: z.int().describe('People min faces server default'),
+    adminOnlyAlbumCreation: z.boolean().describe('Whether album creation is restricted to administrators'),
   })
   .meta({ id: 'ServerConfigDto' });
 

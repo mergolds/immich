@@ -14,6 +14,7 @@
     type AlbumGroupOptionMetadata,
     type AlbumSortOptionMetadata,
     collapseAllAlbumGroups,
+    canCreateAlbum,
     createAlbumAndRedirect,
     expandAllAlbumGroups,
     findFilterOption,
@@ -128,15 +129,17 @@
 </div>
 
 <!-- Create Album -->
-<Button
-  leadingIcon={mdiPlusBoxOutline}
-  onclick={() => createAlbumAndRedirect()}
-  size="small"
-  variant="ghost"
-  color="secondary"
->
-  <p class="hidden md:block">{$t('create_album')}</p>
-</Button>
+{#if canCreateAlbum()}
+  <Button
+    leadingIcon={mdiPlusBoxOutline}
+    onclick={() => createAlbumAndRedirect()}
+    size="small"
+    variant="ghost"
+    color="secondary"
+  >
+    <p class="hidden md:block">{$t('create_album')}</p>
+  </Button>
+{/if}
 
 <!-- Sort Albums -->
 <Dropdown

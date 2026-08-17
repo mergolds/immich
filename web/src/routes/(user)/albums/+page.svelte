@@ -8,7 +8,7 @@
   import SearchBar from '$lib/elements/SearchBar.svelte';
   import { Route } from '$lib/route';
   import { AlbumFilter, albumViewSettings } from '$lib/stores/preferences.store';
-  import { createAlbumAndRedirect } from '$lib/utils/album-utils';
+  import { canCreateAlbum, createAlbumAndRedirect } from '$lib/utils/album-utils';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
 
@@ -52,7 +52,11 @@
     bind:albumGroupIds={albumGroups}
   >
     {#snippet empty()}
-      <EmptyPlaceholder text={$t('no_albums_message')} onClick={() => createAlbumAndRedirect()} class="mx-auto mt-10" />
+      <EmptyPlaceholder
+        text={$t(canCreateAlbum() ? 'no_albums_message' : 'no_albums_message_admin_only')}
+        onClick={canCreateAlbum() ? () => createAlbumAndRedirect() : undefined}
+        class="mx-auto mt-10"
+      />
     {/snippet}
   </Albums>
 </UserPageLayout>

@@ -24,6 +24,80 @@ export class AlbumUserRepository {
       .executeTakeFirstOrThrow();
   }
 
+  @GenerateSql({ params: [DummyValue.UUID] })
+  async createForAlbum(albumId: string): Promise<number> {
+    const rows = await this.db
+      .insertInto('album_user')
+      .columns(['albumId', 'userId', 'role'])
+      .expression((eb) =>
+        eb
+          .selectFrom('user')
+          .crossJoin('album')
+          .select((eb) => [
+            eb.ref('album.id').as('albumId'),
+            eb.ref('user.id').as('userId'),
+            eb.val(AlbumUserRole.Editor).as('role'),
+          ])
+          .where('album.id', '=', albumId)
+          .where('album.deletedAt', 'is', null)
+          .where('user.deletedAt', 'is', null),
+      )
+      .onConflict((oc) => oc.columns(['albumId', 'userId']).doNothing())
+      .returning('userId')
+      .execute();
+
+    return rows.length;
+  }
+
+  @GenerateSql({ params: [DummyValue.UUID] })
+  async createForUser(userId: string): Promise<number> {
+    const rows = await this.db
+      .insertInto('album_user')
+      .columns(['albumId', 'userId', 'role'])
+      .expression((eb) =>
+        eb
+          .selectFrom('album')
+          .crossJoin('user')
+          .select((eb) => [
+            eb.ref('album.id').as('albumId'),
+            eb.ref('user.id').as('userId'),
+            eb.val(AlbumUserRole.Editor).as('role'),
+          ])
+          .where('user.id', '=', userId)
+          .where('user.deletedAt', 'is', null)
+          .where('album.deletedAt', 'is', null),
+      )
+      .onConflict((oc) => oc.columns(['albumId', 'userId']).doNothing())
+      .returning('albumId')
+      .execute();
+
+    return rows.length;
+  }
+
+  @GenerateSql({ params: [] })
+  async createForAll(): Promise<number> {
+    const rows = await this.db
+      .insertInto('album_user')
+      .columns(['albumId', 'userId', 'role'])
+      .expression((eb) =>
+        eb
+          .selectFrom('album')
+          .crossJoin('user')
+          .select((eb) => [
+            eb.ref('album.id').as('albumId'),
+            eb.ref('user.id').as('userId'),
+            eb.val(AlbumUserRole.Editor).as('role'),
+          ])
+          .where('user.deletedAt', 'is', null)
+          .where('album.deletedAt', 'is', null),
+      )
+      .onConflict((oc) => oc.columns(['albumId', 'userId']).doNothing())
+      .returning('albumId')
+      .execute();
+
+    return rows.length;
+  }
+
   @GenerateSql({ params: [{ userId: DummyValue.UUID, albumId: DummyValue.UUID }, { role: AlbumUserRole.Viewer }] })
   async update({ userId, albumId }: AlbumPermissionId, dto: Updateable<AlbumUserTable>) {
     await this.db

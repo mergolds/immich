@@ -22460,6 +22460,10 @@
       },
       "ServerConfigDto": {
         "properties": {
+          "adminOnlyAlbumCreation": {
+            "description": "Whether album creation is restricted to administrators",
+            "type": "boolean"
+          },
           "externalDomain": {
             "description": "External domain URL",
             "type": "string"
@@ -22516,6 +22520,7 @@
           }
         },
         "required": [
+          "adminOnlyAlbumCreation",
           "externalDomain",
           "isInitialized",
           "isOnboarded",
@@ -25585,6 +25590,9 @@
           "integrityChecks": {
             "$ref": "#/components/schemas/SystemConfigIntegrityChecks"
           },
+          "jeCustomizations": {
+            "$ref": "#/components/schemas/SystemConfigJECustomizationsDto"
+          },
           "job": {
             "$ref": "#/components/schemas/SystemConfigJobDto"
           },
@@ -25645,6 +25653,7 @@
           "ffmpeg",
           "image",
           "integrityChecks",
+          "jeCustomizations",
           "job",
           "library",
           "logging",
@@ -25987,6 +25996,23 @@
         "required": [
           "cronExpression",
           "enabled"
+        ],
+        "type": "object"
+      },
+      "SystemConfigJECustomizationsDto": {
+        "properties": {
+          "adminOnlyAlbumCreation": {
+            "description": "Restrict album creation to administrators",
+            "type": "boolean"
+          },
+          "autoShareAlbums": {
+            "description": "Automatically share albums with all users",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "adminOnlyAlbumCreation",
+          "autoShareAlbums"
         ],
         "type": "object"
       },

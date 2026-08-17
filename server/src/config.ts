@@ -69,6 +69,10 @@ export type SystemConfig = {
       percentageLimit: number;
     };
   };
+  jeCustomizations: {
+    autoShareAlbums: boolean;
+    adminOnlyAlbumCreation: boolean;
+  };
   job: Record<ConcurrentQueueName, { concurrency: number }>;
   logging: {
     enabled: boolean;
@@ -269,6 +273,10 @@ export const defaults = Object.freeze<SystemConfig>({
       timeLimit: 60 * 60 * 1000, // 1 hour
       percentageLimit: 1, // 100% of assets
     },
+  },
+  jeCustomizations: {
+    autoShareAlbums: false,
+    adminOnlyAlbumCreation: false,
   },
   job: {
     [QueueName.BackgroundTask]: { concurrency: 5 },

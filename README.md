@@ -50,6 +50,15 @@
 > [!NOTE]
 > You can find the main documentation, including installation guides, at https://immich.app/.
 
+## JE Customizations
+
+This build adds optional album policies under **Administration > System Settings > JE Customizations**:
+
+- **Automatically share albums** adds all active users to active albums as editors and reconciles new albums, new or restored users, and restored albums.
+- **Restrict album creation to administrators** prevents non-admin users from creating albums across the API, web, and mobile apps.
+
+Both settings are disabled by default. Disabling automatic sharing stops future reconciliation without removing existing album memberships.
+
 ## Links
 
 - [Documentation](https://docs.immich.app/)
